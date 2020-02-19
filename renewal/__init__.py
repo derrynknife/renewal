@@ -166,7 +166,8 @@ class CoxLewis():
 
     @classmethod
     def inv_mcf(cls, mcf, alpha, beta):
-        return (np.log(mcf) - alpha)/beta
+        return (np.log((mcf * beta) + np.exp(alpha)) - alpha)/beta
+
 class Crow():
     def __init__(self):
         self.k = 2
