@@ -103,13 +103,12 @@ class NonParametric():
 
 
 class Parametric():
-
     def __init__(self, dist):
         self.dist = dist
 
     @classmethod
     def fit(cls, x, r, d, model='Duane'):
-        assert model in ['Duane', 'Crow', 'Log-Linear', 'Best']
+        assert model in ['Duane', 'Crow', 'Cox-Lewis', 'Best']
         dist = DISTS[model]
         out = cls(dist)
 
@@ -120,8 +119,11 @@ class Parametric():
         out.d = d
 
         mcf_hat = np.cumsum(d/r)
+        init = dist.param_initialiser(x, mcf_hat)
+
         fun = lambda t : np.sum((dist.mcf(x, *t) - mcf_hat)**2)
-        res = minimize(fun, (1., 1.))
+        with np.errstate(all='ignore'):
+            res = minimize(fun, init)
         out.res = res
         return out
 
@@ -132,20 +134,64 @@ class Duane():
         self.k = 2
 
     @classmethod
+    def param_initialiser(self, x, mcf):
+        return 1., 1.
+
+    @classmethod
     def mcf(cls, x, b, alpha):
         return b * x**alpha
 
     @classmethod
-    def rocof(self, x, b, alpha):
+    def rocof(cls, x, b, alpha):
         return (1./b) * x**(-alpha)
 
     @classmethod
     def inv_mcf(cls, mcf, b, alpha):
         return (mcf/b)**(1./alpha)
+class CoxLewis():
+    def __init__(self):
+        self.k = 2
+
+    @classmethod
+    def param_initialiser(self, x, mcf):
+        return np.polyfit(x, np.log(mcf), 1)
+
+    @classmethod
+    def mcf(cls, x, alpha, beta):
+        return (np.exp(alpha + beta*x) - np.exp(alpha))/beta
+
+    @classmethod
+    def rocof(cls, x, alpha, beta):
+        return np.exp(alpha + beta * x)
+
+    @classmethod
+    def inv_mcf(cls, mcf, alpha, beta):
+        return (np.log(mcf) - alpha)/beta
+class Crow():
+    def __init__(self):
+        self.k = 2
+
+    @classmethod
+    def param_initialiser(self, x, mcf):
+        return 1., 1.
+
+    @classmethod
+    def mcf(cls, x, alpha, beta):
+        return (x**beta)/alpha
+
+    @classmethod
+    def rocof(cls, x, alpha, beta):
+        return (beta/alpha) * x**(beta - 1.)
+
+    @classmethod
+    def inv_mcf(cls, mcf, alpha, beta):
+        return (alpha * mcf) ** (1./beta)
 
 
 DISTS = {
-    'Duane' : Duane
+    'Duane' : Duane,
+    'Cox-Lewis' : CoxLewis,
+    'Crow' : Crow
 }
 
 
