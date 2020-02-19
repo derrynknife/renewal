@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.stats import t, norm
+from scipy.optimize import minimize
 
 class DataWrangler():
     @classmethod
@@ -118,13 +119,10 @@ class Parametric():
         out.r = r
         out.d = d
 
-        out.mcf_hat = np.cumsum(d/r)
-
-
-        fun lambda t : dist.MCF()
-
-        out.mcf = lambda x : 
-
+        mcf_hat = np.cumsum(d/r)
+        fun = lambda t : np.sum((dist.mcf(x, *t) - mcf_hat)**2)
+        res = minimize(fun, (1., 1.))
+        out.res = res
         return out
 
 class Duane():
@@ -133,13 +131,17 @@ class Duane():
     def __init__(self):
         self.k = 2
 
-    def MCF(self, x, b, alpha):
-        return b * T**alpha
+    @classmethod
+    def mcf(cls, x, b, alpha):
+        return b * x**alpha
 
+    @classmethod
     def rocof(self, x, b, alpha):
         return (1./b) * x**(-alpha)
 
-
+    @classmethod
+    def inv_mcf(cls, mcf, b, alpha):
+        return (mcf/b)**(1./alpha)
 
 
 DISTS = {
